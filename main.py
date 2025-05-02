@@ -3,6 +3,9 @@ from urllib.parse import parse_qs
 import json
 
 def handler(request, response):
+    # Log the request query string
+    print(f"Request query string: {request.query_string}")
+
     # Extract query parameters
     query_params = parse_qs(request.query_string)
     country = query_params.get('country', [None])[0]
@@ -27,16 +30,19 @@ def handler(request, response):
     }
 
     try:
+        print(f"Sending request to {url} with headers {headers}")
         # Make the request to fetch country data
         response_data = requests.get(url, headers=headers)
+        
+        # Log the status code of the response
+        print(f"API response status code: {response_data.status_code}")
+
         if response_data.status_code == 200:
             countries = response_data.json()
-            # Filter countries based on the query parameter (if applicable)
             filtered_data = [
                 item for item in countries if item.get('country') == country
             ]
             
-            # Return the filtered data as JSON response
             if filtered_data:
                 return response.json(filtered_data)
             else:
@@ -44,4 +50,6 @@ def handler(request, response):
         else:
             return response.json({"error": "Failed to fetch data from source", "status": response_data.status_code}, status=500)
     except Exception as e:
+        # Log the error
+        print(f"Error occurred: {str(e)}")
         return response.json({"error": str(e)}, status=500)

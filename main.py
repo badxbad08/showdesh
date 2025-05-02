@@ -3,15 +3,12 @@ from urllib.parse import parse_qs
 import json
 
 def handler(request, response):
-    # Log the request query string
-    print(f"Request query string: {request.query_string}")
-
-    # Extract query parameters
+    # Extract the query string
     query_params = parse_qs(request.query_string)
-    country = query_params.get('country', [None])[0]
-    
+    country = query_params.get('countries', [None])[0]
+
     if not country:
-        return response.json({"error": "Missing 'country' query parameter"}, status=400)
+        return response.json({"error": "Missing 'countries' query parameter"}, status=400)
 
     url = "https://otp-api.shelex.dev/api/countries"
     headers = {
@@ -30,19 +27,13 @@ def handler(request, response):
     }
 
     try:
-        print(f"Sending request to {url} with headers {headers}")
-        # Make the request to fetch country data
+        # Fetch country data from the external API
         response_data = requests.get(url, headers=headers)
         
-        # Log the status code of the response
-        print(f"API response status code: {response_data.status_code}")
-
         if response_data.status_code == 200:
             countries = response_data.json()
-            filtered_data = [
-                item for item in countries if item.get('country') == country
-            ]
-            
+            filtered_data = [item for item in countries if item.get('country') == country]
+
             if filtered_data:
                 return response.json(filtered_data)
             else:
@@ -50,6 +41,4 @@ def handler(request, response):
         else:
             return response.json({"error": "Failed to fetch data from source", "status": response_data.status_code}, status=500)
     except Exception as e:
-        # Log the error
-        print(f"Error occurred: {str(e)}")
         return response.json({"error": str(e)}, status=500)

@@ -1,7 +1,15 @@
-import json
 import requests
+from urllib.parse import parse_qs
+import json
 
 def handler(request, response):
+    # Extract query parameters
+    query_params = parse_qs(request.query_string)
+    country = query_params.get('country', [None])[0]
+    
+    if not country:
+        return response.json({"error": "Missing 'country' query parameter"}, status=400)
+
     url = "https://otp-api.shelex.dev/api/countries"
     headers = {
         "authority": "otp-api.shelex.dev",
@@ -19,19 +27,21 @@ def handler(request, response):
     }
 
     try:
-        r = requests.get(url, headers=headers)
-        if r.status_code == 200:
-            countries = r.json()
-            result = []
-            for item in countries:
-                result.append({
-                    "url": item.get("url", ""),
-                    "country": item.get("country", ""),
-                    "source": item.get("source", ""),
-                    "count": item.get("count", "")
-                })
-            return response.json(result)
+        # Make the request to fetch country data
+        response_data = requests.get(url, headers=headers)
+        if response_data.status_code == 200:
+            countries = response_data.json()
+            # Filter countries based on the query parameter (if applicable)
+            filtered_data = [
+                item for item in countries if item.get('country') == country
+            ]
+            
+            # Return the filtered data as JSON response
+            if filtered_data:
+                return response.json(filtered_data)
+            else:
+                return response.json({"error": "Country not found"}, status=404)
         else:
-            return response.json({"error": "Failed to fetch data", "status": r.status_code}, status=500)
+            return response.json({"error": "Failed to fetch data from source", "status": response_data.status_code}, status=500)
     except Exception as e:
         return response.json({"error": str(e)}, status=500)
